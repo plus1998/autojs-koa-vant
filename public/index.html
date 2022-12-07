@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autojs+Koa+Vant</title>
+    <script src="/lib/vue.js"></script>
+    <script src="/lib/axios.js"></script>
+    <link rel="stylesheet" href="/lib/vant.css" />
+    <script src="/lib/vant.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <van-nav-bar title="AutoJs Pro"></van-nav-bar>
+        <van-notice-bar left-icon="volume-o" text="本工具仅供学习就交流、禁止将本工具用于非法用途"></van-notice-bar>
+        <van-swipe :autoplay="3000" lazy-render>
+            <van-swipe-item v-for="banner in banners" :key="banner">
+                <van-image width="100%" :src="banner" />
+            </van-swipe-item>
+        </van-swipe>
+        <van-divider>常用功能</van-divider>
+        <van-grid>
+            <van-grid-item v-for="func in functions" icon="photo-o">
+                <div @click="execScript(func.url)">
+                    <van-image :src="func.image"></van-image>
+                    <div class="van-grid-item__text" style="margin-top: 10px">{{ func.text }}</div>
+                </div>
+            </van-grid-item>
+        </van-grid>
+        <van-divider>功能反馈</van-divider>
+        <van-form @submit="onSubmit">
+            <van-cell-group inset>
+                <van-field v-model="form.email" name="email" label="您的邮箱" placeholder="邮箱"
+                    :rules="[{ required: true, message: '请填写邮箱' }]"></van-field>
+                <van-field v-model="form.content" name="content" label="意见反馈" placeholder="反馈内容" rows="2" autosize
+                    type="textarea" maxlength="100" show-word-limit
+                    :rules="[{ required: true, message: '请填写内容' }]"></van-field>
+            </van-cell-group>
+            <div style="margin: 16px;">
+                <van-button round block type="primary" native-type="submit">
+                    提交
+                </van-button>
+            </div>
+        </van-form>
+        <div style="width: 90vw; margin: 15px auto">
+            <van-button round block type="danger" @click="exit">
+                退出
+            </van-button>
+        </div>
+    </div>
+
+    <script>
+        // 在 #app 标签下渲染一个按钮组件
+        const app = Vue.createApp({
+            setup() {
+                // 横幅
+                const banners = Vue.reactive([]);
+                const getBanners = async () => {
+                    const { data } = await axios.get('/Banners')
+                    banners.push(...data)
+                }
+                getBanners()
+                // 功能
+                const functions = Vue.reactive([]);
+                const getFunctions = async () => {
+                    const { data } = await axios.get('/Functions')
+                    functions.push(...data)
+                }
+                getFunctions()
+                // 意见反馈
+                const form = Vue.reactive({
+                    email: '',
+                    content: ''
+                })
+                const onSubmit = async () => {
+                    console.log(form)
+                    const { data } = await axios.post('/Submit', form)
+                    console.log(data)
+                    vant.showDialog({
+                        title: '提交成功',
+                        message: data.message
+                    })
+                }
+                // 加载网络脚本
+                const execScript = async (url) => {
+                    const { data } = await axios.post('/Exec', { url })
+                    console.log(data)
+                    if (data.success) vant.showToast('已发送指令')
+                    else vant.showDialog({
+                        title: '运行失败',
+                        message: data.message
+                    })
+                }
+                // 退出
+                const exit = async () => {
+                    await axios.post('/Exit')
+                }
+                return { banners, functions, form, onSubmit, execScript, exit }
+            }
+        });
+        app.use(vant);
+
+        // 通过 CDN 引入时不会自动注册 Lazyload 组件
+        // 可以通过下面的方式手动注册
+        app.use(vant.Lazyload);
+
+        app.mount('#app');
+    </script>
+</body>
+
+</html>
